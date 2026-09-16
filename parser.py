@@ -16,6 +16,7 @@ from ast_nodes import (
     Assignment,
     CallExpr,
     CallStmt,
+    VarDecl,
     StringLiteral,
     TypeName,
 )
@@ -222,7 +223,10 @@ class Parser:
     #         | block
     def parse_statement(self) -> Stmt:
         token = self.peek()
-        
+
+        if token.kind in TYPE_START:
+            return self.parse_declaration()
+
         if token.kind is TokenKind.IDENTIFIER:
             return self.parse_id_or_call_statement()
         
@@ -281,7 +285,27 @@ class Parser:
 
     # declaration ::= type IDENTIFIER (ASSIGN expression)? SEMICOLON
     def parse_declaration(self) -> Stmt:
-        raise NotImplementedError("implemente declaration")
+        start = self.peek()
+        type = self.parse_type()
+        name = self.expect(TokenKind.IDENTIFIER)        
+
+        if self.match(TokenKind.ASSIGN):
+            initializer = self.parse_expression()
+            end = self.expect(TokenKind.SEMICOLON)
+            return VarDecl(
+                type,
+                name = name.lexeme,
+                initializer = initializer,
+                span=self._span(start, end)
+            )
+
+        end = self.expect(TokenKind.SEMICOLON)
+        return VarDecl(
+            type,
+            name = name.lexeme,
+            span=self._span(start, end)
+        )
+       
 
     # if_statement ::= KW_IF LEFT_PAREN expression RIGHT_PAREN block (KW_ELSE block)?
     def parse_if_statement(self) -> Stmt:
