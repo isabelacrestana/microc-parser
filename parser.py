@@ -17,6 +17,10 @@ from ast_nodes import (
     CallExpr,
     CallStmt,
     VarDecl,
+    IfStmt,
+    WhileStmt,
+    ReturnStmt,
+    PrintStmt,
     StringLiteral,
     TypeName,
 )
@@ -288,49 +292,124 @@ class Parser:
         start = self.peek()
         type = self.parse_type()
         name = self.expect(TokenKind.IDENTIFIER)        
+        initializer = None
 
         if self.match(TokenKind.ASSIGN):
             initializer = self.parse_expression()
-            end = self.expect(TokenKind.SEMICOLON)
-            return VarDecl(
-                type,
-                name = name.lexeme,
-                initializer = initializer,
-                span=self._span(start, end)
-            )
 
         end = self.expect(TokenKind.SEMICOLON)
+        
         return VarDecl(
             type,
             name = name.lexeme,
+            initializer = initializer,
             span=self._span(start, end)
         )
-       
+        
 
     # if_statement ::= KW_IF LEFT_PAREN expression RIGHT_PAREN block (KW_ELSE block)?
     def parse_if_statement(self) -> Stmt:
-        raise NotImplementedError("implemente if_statement")
+        start = self.peek()
+        self.expect(TokenKind.KW_IF)
+        self.expect(TokenKind.LEFT_PAREN)
+
+        condition = self.parse_expression()
+
+        self.expect(TokenKind.RIGHT_PAREN)
+ 
+        then_block = self.parse_block()
+
+        if self.match(TokenKind.KW_ELSE):
+            else_block = self.parse_block()
+
+            return IfStmt(
+                condition,
+                then_block,
+                else_block,
+                span=self._span(start, else_block)
+            )
+
+        return IfStmt(
+            condition,
+            then_block,
+            span=self._span(start, then_block)
+        )
 
     # while_statement ::= KW_WHILE LEFT_PAREN expression RIGHT_PAREN block
     def parse_while_statement(self) -> Stmt:
-        raise NotImplementedError("implemente while_statement")
+        start = self.peek()
+        self.expect(TokenKind.KW_WHILE)
+        self.expect(TokenKind.LEFT_PAREN)
+
+        condition = self.parse_expression()
+        self.expect(TokenKind.RIGHT_PAREN)
+        body = self.parse_block()
+
+        return WhileStmt(
+            condition,
+            body,
+            span=self._span(start, body)
+        )
 
     # return_statement ::= KW_RETURN expression? SEMICOLON
     def parse_return_statement(self) -> Stmt:
-        raise NotImplementedError("implemente return_statement")
+        start = self.peek()
+        self.expect(TokenKind.KW_RETURN)
+
+        value = None
+
+        if self.peek().kind != TokenKind.SEMICOLON:
+            value = self.parse_expression()
+
+        end = self.expect(TokenKind.SEMICOLON)
+
+        return ReturnStmt(
+            value,
+            span=self._span(start, end),
+        )
 
     # print_statement ::= KW_PRINT LEFT_PAREN print_item (COMMA print_item)* RIGHT_PAREN SEMICOLON
     def parse_print_statement(self) -> Stmt:
-        raise NotImplementedError("implemente print_statement")
+        start = self.peek()
+        self.expect(TokenKind.KW_PRINT)
+        self.expect(TokenKind.LEFT_PAREN)
 
+        print_items: list[PrintItem] = []
+
+        print_items.append(self.parse_print_item())
+
+        while self.match(TokenKind.COMMA):
+            print_items.append(self.parse_print_item())
+
+        self.expect(TokenKind.RIGHT_PAREN)
+        end = self.expect(TokenKind.SEMICOLON)
+
+        return PrintStmt(
+            items=print_items,
+            span=self._span(start, end),
+        )
+
+    # print_item ::= expression | string_literals
     def parse_print_item(self) -> PrintItem:
-        raise NotImplementedError("implemente print_item")
+        token = self.peek()
+
+        if token.kind is TokenKind.STRING_LITERAL:
+            return self.parse_string_literals()
+
+        if token.kind in EXPRESSION_START:
+            return self.parse_expression()
+
+        raise ParserError(token, {
+            *EXPRESSION_START,
+            TokenKind.STRING_LITERAL,
+        })
 
     def parse_string_literals(self) -> StringLiteral:
         raise NotImplementedError("implemente string_literals")
 
+    # expression ::= logical_or
     def parse_expression(self) -> Expr:
-        raise NotImplementedError("implemente expression")
+        return self.parse_logical_or()
 
     def parse_logical_or(self) -> Expr:
         raise NotImplementedError("implemente logical_or")
