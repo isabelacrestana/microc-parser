@@ -404,37 +404,180 @@ class Parser:
             TokenKind.STRING_LITERAL,
         })
 
+    # string_literals ::= STRING_LITERAL+
     def parse_string_literals(self) -> StringLiteral:
-        raise NotImplementedError("implemente string_literals")
 
+        start = self.peek()
+
+        string_literal = start.lexeme
+
+        self.expect(TokenKind.STRING_LITERAL)
+
+        end = start
+
+        while self.check(TokenKind.STRING_LITERAL):
+            next_token = self.peek()
+            string_literal += next_token.lexeme
+            end = next_token
+            self.advance()
+
+        return StringLiteral(
+            value=string_literal,
+            span=self._span(start, end)
+        )
+    
     # expression ::= logical_or
     def parse_expression(self) -> Expr:
         return self.parse_logical_or()
 
+    # logical_or ::= logical_and (LOGICAL_OR logical_and)*
     def parse_logical_or(self) -> Expr:
-        raise NotImplementedError("implemente logical_or")
 
+        left = self.parse_logical_and()
+
+        while self.check(TokenKind.LOGICAL_OR):
+            next_token = self.peek()
+            operator = next_token.lexeme
+            self.advance()
+            right = self.parse_logical_and()
+
+            left = Expr(
+                left = left,
+                operator=operator,
+                right = right,
+                span=self._span(left,right)
+            )
+
+        return left
+
+    # logical_and ::= equality (LOGICAL_AND equality)*
     def parse_logical_and(self) -> Expr:
-        raise NotImplementedError("implemente logical_and")
 
+        left = self.parse_equality()
+        
+        while self.check(TokenKind.LOGICAL_AND):
+            next_token = self.peek()
+            operator = next_token.lexeme
+            self.advance()
+            right = self.parse_equality()
+
+            left = Expr(
+                left = left,
+                operator=operator,
+                right = right,
+                span=self._span(left,right)
+            )
+        
+        return left
+
+    # equality ::= relational ((EQUAL_EQUAL | NOT_EQUAL) relational)*
     def parse_equality(self) -> Expr:
-        raise NotImplementedError("implemente equality")
 
+        left = self.parse_relational()
+        
+        while self.check(TokenKind.EQUAL_EQUAL):
+            next_token = self.peek()
+            operator = next_token.lexeme
+            self.advance()
+            right = self.parse_relational()
+
+            left = Expr(
+                left = left,
+                operator=operator,
+                right = right,
+                span=self._span(left,right)
+            )
+        
+        return left
+
+    # relational ::= additive ((LESS | LESS_EQUAL | GREATER | GREATER_EQUAL) additive)*
     def parse_relational(self) -> Expr:
-        raise NotImplementedError("implemente relational")
 
+        left = self.parse_additive()
+        
+        while self.check(TokenKind.LESS) or self.check(TokenKind.LESS_EQUAL) or self.check(TokenKind.GREATER) or self.check(TokenKind.GREATER_EQUAL):
+            next_token = self.peek()
+            operator = next_token.lexeme
+            self.advance()
+            right = self.parse_additive()
+
+            left = Expr(
+                left = left,
+                operator=operator,
+                right = right,
+                span=self._span(left,right)
+            )
+        
+        return left
+
+    # additive ::= multiplicative ((PLUS | MINUS) multiplicative)*
     def parse_additive(self) -> Expr:
-        raise NotImplementedError("implemente additive")
 
+        left = self.parse_multiplicative()
+
+        while self.check(TokenKind.PLUS) or self.check(TokenKind.MINUS):
+            next_token = self.peek()
+            operator = next_token.lexeme
+            self.advance()
+            right = self.parse_multiplicative()
+
+            left = Expr (
+                left = left,
+                operator = operator,
+                right = right,
+                span=self._span(left,right)
+            )
+
+        return left
+
+
+    # multiplicative ::= unary ((STAR | SLASH | PERCENT) unary)*
     def parse_multiplicative(self) -> Expr:
-        raise NotImplementedError("implemente multiplicative")
 
+        left = self.parse_unary()
+
+        while self.check(TokenKind.STAR) or self.check(TokenKind.SLASH) or self.check(TokenKind.PERCENT):
+            next_token = self.peek()
+            operator = next_token.lexeme
+            self.advance()
+            right = self.parse_unary()
+
+            left = Expr (
+                left = left,
+                operator = operator,
+                right = right,
+                span=self._span(left,right)
+            )
+
+        return left        
+
+
+    # unary ::= (LOGICAL_NOT | MINUS) unary | primary
     def parse_unary(self) -> Expr:
-        raise NotImplementedError("implemente unary")
 
+        if self.peek().kind in (TokenKind.LOGICAL_NOT, TokenKind.MINUS):
+            start = self.peek()
+            op_token = self.advance()
+
+            operand = self.parse_primary
+
+            return Expr(
+                operator = op_token.lexeme,
+                operand=operand,
+                span=self._span(start, operand)
+            )
+
+        return self.parse_primary
+
+    #primary ::= LEFT_PAREN expression RIGHT_PAREN
+    #      | IDENTIFIER (LEFT_PAREN arguments RIGHT_PAREN)?
+    #      | INT_LITERAL
+    #      | KW_TRUE
+    #      | KW_FALSE
     def parse_primary(self) -> Expr:
         raise NotImplementedError("implemente primary")
 
+    # arguments ::= (expression (COMMA expression)*)?
     def parse_arguments(self) -> list[Expr]:
         raise NotImplementedError("implemente arguments")
 
