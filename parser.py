@@ -579,5 +579,17 @@ class Parser:
 
     # arguments ::= (expression (COMMA expression)*)?
     def parse_arguments(self) -> list[Expr]:
-        raise NotImplementedError("implemente arguments")
+
+        arguments: list[Expr] = []
+
+        if self.check(TokenKind.RIGHT_PAREN):
+            return arguments
+
+        arguments.append(self.parse_expression())
+
+        while self.match(TokenKind.COMMA):
+            arguments.append(self.parse_expression())
+
+
+        return arguments
 
