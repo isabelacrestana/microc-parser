@@ -22,6 +22,9 @@ from ast_nodes import (
     ReturnStmt,
     PrintStmt,
     StringLiteral,
+    IdentifierExpr,
+    IntLiteral,
+    BoolLiteral,
     TypeName,
 )
 
@@ -575,7 +578,52 @@ class Parser:
     #      | KW_TRUE
     #      | KW_FALSE
     def parse_primary(self) -> Expr:
-        raise NotImplementedError("implemente primary")
+        start = self.peek()
+
+        if self.check(TokenKind.LEFT_PAREN):
+            self.advance()
+            expression = self.parse_expression()
+            end = self.expect(TokenKind.RIGHT_PAREN)
+            # nao cria um novo nó
+            expression.span=self._span(start, end)
+            return expression
+
+        if self.check(TokenKind.IDENTIFIER):
+            self.advance()
+            if self.match(TokenKind.LEFT_PAREN): 
+                args = self.parse_arguments()
+                end = self.expect(TokenKind.RIGHT_PAREN)
+                return CallExpr(
+                    start.lexeme, 
+                    arguments=args,
+                    span=self._span(start, end)
+                )
+
+            return IdentifierExpr(start.lexeme, span=self._token_span(start))
+
+        if self.check(TokenKind.INT_LITERAL):
+            self.advance()
+            return IntLiteral(
+                int(start.value),
+                span=self._token_span(start)               
+            )
+            
+        if self.check(TokenKind.KW_TRUE):
+            self.advance()
+            return BoolLiteral(
+                True,
+                span=self._token_span(start)
+            )
+
+        if self.check(TokenKind.KW_FALSE):
+            self.advance()
+            return BoolLiteral(
+                False,
+                span=self._token_span(start)
+            ) 
+
+        raise ParserError(self.peek(), {TokenKind.LEFT_PAREN, TokenKind.IDENTIFIER, TokenKind.INT_LITERAL, TokenKind.KW_TRUE, TokenKind.KW_FALSE}) 
+    
 
     # arguments ::= (expression (COMMA expression)*)?
     def parse_arguments(self) -> list[Expr]:
