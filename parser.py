@@ -26,6 +26,10 @@ from ast_nodes import (
     IntLiteral,
     BoolLiteral,
     TypeName,
+    BinaryExpr,
+    BinaryOperator,
+    UnaryExpr,
+    UnaryOperator,
 )
 
 
@@ -335,6 +339,7 @@ class Parser:
         return IfStmt(
             condition,
             then_block,
+            None,
             span=self._span(start, then_block)
         )
 
@@ -412,7 +417,7 @@ class Parser:
 
         start = self.peek()
 
-        string_literal = start.lexeme
+        string_literal = start.lexeme[1:-1]
 
         self.expect(TokenKind.STRING_LITERAL)
 
@@ -420,7 +425,7 @@ class Parser:
 
         while self.check(TokenKind.STRING_LITERAL):
             next_token = self.peek()
-            string_literal += next_token.lexeme
+            string_literal += next_token.lexeme[1:-1]
             end = next_token
             self.advance()
 
@@ -444,9 +449,9 @@ class Parser:
             self.advance()
             right = self.parse_logical_and()
 
-            left = Expr(
+            left = BinaryExpr(
                 left = left,
-                operator=operator,
+                operator=BinaryOperator(operator),
                 right = right,
                 span=self._span(left,right)
             )
@@ -464,9 +469,9 @@ class Parser:
             self.advance()
             right = self.parse_equality()
 
-            left = Expr(
+            left = BinaryExpr(
                 left = left,
-                operator=operator,
+                operator=BinaryOperator(operator),
                 right = right,
                 span=self._span(left,right)
             )
@@ -484,9 +489,9 @@ class Parser:
             self.advance()
             right = self.parse_relational()
 
-            left = Expr(
+            left = BinaryExpr(
                 left = left,
-                operator=operator,
+                operator=BinaryOperator(operator),
                 right = right,
                 span=self._span(left,right)
             )
@@ -504,9 +509,9 @@ class Parser:
             self.advance()
             right = self.parse_additive()
 
-            left = Expr(
+            left = BinaryExpr(
                 left = left,
-                operator=operator,
+                operator=BinaryOperator(operator),
                 right = right,
                 span=self._span(left,right)
             )
@@ -524,9 +529,9 @@ class Parser:
             self.advance()
             right = self.parse_multiplicative()
 
-            left = Expr (
+            left = BinaryExpr (
                 left = left,
-                operator = operator,
+                operator = BinaryOperator(operator),
                 right = right,
                 span=self._span(left,right)
             )
@@ -545,9 +550,9 @@ class Parser:
             self.advance()
             right = self.parse_unary()
 
-            left = Expr (
+            left = BinaryExpr (
                 left = left,
-                operator = operator,
+                operator = BinaryOperator(operator),
                 right = right,
                 span=self._span(left,right)
             )
@@ -562,15 +567,15 @@ class Parser:
             start = self.peek()
             op_token = self.advance()
 
-            operand = self.parse_primary
+            operand = self.parse_primary()
 
-            return Expr(
+            return UnaryExpr(
                 operator = op_token.lexeme,
-                operand=operand,
+                operand=UnaryOperator(operand),
                 span=self._span(start, operand)
             )
 
-        return self.parse_primary
+        return self.parse_primary()
 
     #primary ::= LEFT_PAREN expression RIGHT_PAREN
     #      | IDENTIFIER (LEFT_PAREN arguments RIGHT_PAREN)?
